@@ -1,0 +1,8 @@
+/* 設定の画面の文言。キーは英語（英語の文言を兼ねる） */
+
+"None" = "なし";
+"Left" = "左";
+"Right" = "右";
+"Quit AnyKana" = "AnyKana を終了";
+"%@ (not installed)" = "%@（入っていない）";
+"globe.note" = "[キーボードの設定](x-apple.systempreferences:com.apple.Keyboard-Settings.extension)で、「🌐 キーを押して」を「何もしない」にしてください";
