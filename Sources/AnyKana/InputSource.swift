@@ -35,7 +35,8 @@ import AnyKanaCore
     /// ⌃Space（前の入力ソースを選択）を送り、macOS 自身の切り替えで目的に戻す（要件の「決めたこと」）。
     /// もうその入力ソースなら、何もしない。
     private func selectInputSource(id: String) {
-        guard let source = Self.enabledSource(id: id), let abc = Self.enabledSource(id: Self.abcID) else {
+        let sources = InstalledInputSources.selectableSources()
+        guard let source = Self.find(id, in: sources), let abc = Self.find(Self.abcID, in: sources) else {
             logger.error("no enabled input source: \(id, privacy: .public) or ABC")
             return
         }
@@ -71,10 +72,8 @@ import AnyKanaCore
         }
     }
 
-    private static func enabledSource(id: String) -> TISInputSource? {
-        let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
-        let sources = TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource]
-        return sources?.first
+    private static func find(_ id: String, in sources: [TISInputSource]) -> TISInputSource? {
+        sources.first { stringProperty($0, kTISPropertyInputSourceID) == id }
     }
 
     private static func currentSourceID() -> String? {
@@ -92,20 +91,47 @@ struct InputSourceInfo: Identifiable, Hashable {
 enum InstalledInputSources {
     /// 今有効で、選べるキーボードの入力ソース（入力メニューに並ぶもの）
     static func selectable() -> [InputSourceInfo] {
-        let filter =
-            [
-                kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as String,
-                kTISPropertyInputSourceIsSelectCapable as String: true,
-            ] as CFDictionary
-        let sources = TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource] ?? []
-        return sources.compactMap { source in
+        selectableSources().compactMap { source in
             guard let id = stringProperty(source, kTISPropertyInputSourceID) else { return nil }
             return InputSourceInfo(id: id, name: stringProperty(source, kTISPropertyLocalizedName) ?? id)
         }
+    }
+
+    /// 「有効なものだけ」の一覧は、長く動くプロセスでは外したものも残るので、入っているものすべてから選ぶ
+    /// （AnyKanaCore の SelectableInputSources）。
+    static func selectableSources() -> [TISInputSource] {
+        let filter =
+            [kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as String] as CFDictionary
+        let sources = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as? [TISInputSource] ?? []
+        let ids = Set(SelectableInputSources.ids(from: sources.compactMap(traits)))
+        return sources.filter { stringProperty($0, kTISPropertyInputSourceID).map(ids.contains) ?? false }
+    }
+
+    private static func traits(_ source: TISInputSource) -> InputSourceTraits? {
+        guard let id = stringProperty(source, kTISPropertyInputSourceID) else { return nil }
+        let type = stringProperty(source, kTISPropertyInputSourceType)
+        let kind: InputSourceTraits.Kind =
+            if type == kTISTypeKeyboardInputMode as String {
+                .inputMode
+            } else if type == kTISTypeKeyboardInputMethodModeEnabled as String {
+                .inputMethod
+            } else {
+                // キーボード配列と、モードを持たない入力方式は、それ自体を選ぶ
+                .standalone
+            }
+        return InputSourceTraits(
+            id: id, kind: kind, bundleID: stringProperty(source, kTISPropertyBundleID),
+            isEnabled: boolProperty(source, kTISPropertyInputSourceIsEnabled),
+            isSelectCapable: boolProperty(source, kTISPropertyInputSourceIsSelectCapable))
     }
 }
 
 private func stringProperty(_ source: TISInputSource, _ key: CFString) -> String? {
     guard let pointer = TISGetInputSourceProperty(source, key) else { return nil }
     return Unmanaged<CFString>.fromOpaque(pointer).takeUnretainedValue() as String
+}
+
+private func boolProperty(_ source: TISInputSource, _ key: CFString) -> Bool {
+    guard let pointer = TISGetInputSourceProperty(source, key) else { return false }
+    return CFBooleanGetValue(Unmanaged<CFBoolean>.fromOpaque(pointer).takeUnretainedValue())
 }
