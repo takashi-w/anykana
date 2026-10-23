@@ -81,4 +81,24 @@ struct KeyMapTests {
     func emptyPropertyList() {
         #expect(KeyMap(propertyList: [:]) == KeyMap([:]))
     }
+
+    @Test("外した入力ソースの割り当ては、消して「なし」にする")
+    func removedSourceIsUnassigned() {
+        let pinyin = "com.apple.inputmethod.SCIM.ITABC"
+        let map = KeyMap([.leftCommand: InputSourceID.abc, .globe: pinyin])
+        #expect(
+            map.keepingOnly(available: [InputSourceID.abc, InputSourceID.zhuyin])
+                == KeyMap([.leftCommand: InputSourceID.abc]))
+    }
+
+    @Test("選べる入力ソースの割り当ては、そのまま残す")
+    func availableSourcesStay() {
+        let available = [InputSourceID.abc, InputSourceID.japanese, InputSourceID.zhuyin]
+        #expect(KeyMap.default.keepingOnly(available: available) == KeyMap.default)
+    }
+
+    @Test("選べる入力ソースの一覧が空なら、何も消さない（一覧を取れなかったとき）")
+    func emptyAvailableKeepsAll() {
+        #expect(KeyMap.default.keepingOnly(available: []) == KeyMap.default)
+    }
 }
