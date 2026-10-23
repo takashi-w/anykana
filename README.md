@@ -29,7 +29,7 @@ Sources/AnyKana/        OS につなぐ部分（イベントタップ、入力�
 Tests/AnyKanaCoreTests/  Swift Testing のテスト（Command Line Tools だけでは XCTest は使えない）
 Resources/Info.plist    アプリの情報（Bundle ID、Dock に出さない LSUIElement）
 Resources/*.lproj      画面の文言（英語と日本語。システムの言語に従う）
-Resources/AppIcon.icns アイコン（仮置き）。scripts/make-icon.swift で描いて作る
+Resources/AppIcon.icns アイコン。scripts/make-icon.swift で描いて作る
 scripts/build-app.sh   .app に組んで、自己署名の証明書で署名し、~/Applications に置く
 scripts/test.sh        swift test を動かす（Command Line Tools だけのときに要る場所を足す）
 ```
