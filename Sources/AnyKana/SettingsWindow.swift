@@ -17,6 +17,7 @@ import SwiftUI
         // 入力ソースは開くたびに一覧し直す（システム設定で足したり外したりしているかもしれない）
         let sources = InstalledInputSources.selectable()
         logger.debug("input sources: \(sources.map(\.name).joined(separator: ", "), privacy: .public)")
+        store.keepOnly(available: sources.map(\.id))
         let view = SettingsView(store: store, sources: sources)
         if let hosting, let window {
             hosting.rootView = view
@@ -65,7 +66,7 @@ struct SettingsView: View {
                 ForEach(Slot.allCases, id: \.self) { slot in
                     Picker(selection: selection(for: slot)) {
                         Text("None").tag(String?.none)
-                        ForEach(options(for: slot)) { source in
+                        ForEach(sources) { source in
                             Text(source.name).tag(String?.some(source.id))
                         }
                     } label: {
@@ -95,14 +96,6 @@ struct SettingsView: View {
         Binding(
             get: { store.keyMap.inputSources[slot] },
             set: { store.assign($0, to: slot) })
-    }
-
-    /// 有効な入力ソースに、割り当て済みで今は入っていないものを足す（外したことが分かるように）。
-    private func options(for slot: Slot) -> [InputSourceInfo] {
-        guard let id = store.keyMap.inputSources[slot], !sources.contains(where: { $0.id == id }) else {
-            return sources
-        }
-        return sources + [InputSourceInfo(id: id, name: String(localized: "\(id) (not installed)"))]
     }
 }
 

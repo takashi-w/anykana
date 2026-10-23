@@ -11,6 +11,14 @@ public struct KeyMap: Sendable, Equatable {
         inputSources[slot].map(Destination.init(inputSourceID:))
     }
 
+    /// 選べる入力ソースの割り当てだけを残す。外した入力ソースの枠は「なし」になる（押しても何も起きないので、そのとおりに見せる）。
+    /// 一覧が空なら、取れなかったとみなして何も消さない。
+    public func keepingOnly(available: some Collection<String>) -> KeyMap {
+        guard !available.isEmpty else { return self }
+        let available = Set(available)
+        return KeyMap(inputSources.filter { available.contains($0.value) })
+    }
+
     /// 保存の形（枠の名前 → 入力ソースの ID）から作る。知らない枠の名前は読み飛ばす。
     public init(propertyList: [String: String]) {
         var inputSources: [Slot: String] = [:]
